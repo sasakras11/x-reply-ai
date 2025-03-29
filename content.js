@@ -3,6 +3,7 @@
 
 class TwitterBot {
   constructor() {
+    console.log('[TwitterBot] Initializing content script');
     this.isRunning = false;
     this.targetSearch = 'startup';
     this.followerThreshold = 1000;
@@ -34,7 +35,11 @@ class TwitterBot {
   }
 
   startBot(config) {
-    if (this.isRunning) return;
+    console.log('[TwitterBot] Starting bot with config:', config);
+    if (this.isRunning) {
+      console.log('[TwitterBot] Bot is already running');
+      return;
+    }
     
     this.isRunning = true;
     this.targetSearch = config.searchQuery || this.targetSearch;
@@ -74,11 +79,12 @@ class TwitterBot {
   }
   
   async processTweets() {
+    console.log('[TwitterBot] Processing tweets, running:', this.isRunning);
     if (!this.isRunning) return;
     
     // Check if we need a break
     if (this.repliesMade >= this.repliesBeforeBreak) {
-      this.logActivity('Taking a break after ' + this.repliesMade + ' replies');
+      this.logActivity(`Taking a break after ${this.repliesMade} replies`, 'info');
       this.repliesMade = 0;
       this.repliesBeforeBreak = this.getRandomInt(8, 10);
       return;
@@ -86,6 +92,7 @@ class TwitterBot {
     
     // Get new tweets
     const tweets = document.querySelectorAll('[data-testid="tweet"]');
+    this.logActivity(`Found ${tweets.length} tweets to process`, 'info');
     
     // Process each unprocessed tweet
     for (const tweet of tweets) {
@@ -101,8 +108,9 @@ class TwitterBot {
             const authorName = this.getAuthorName(tweet);
             
             if (tweetText && authorName) {
+              this.logActivity(`Processing tweet from ${authorName}`, 'info');
               // Generate and send reply
-              this.generateReply(tweet, tweetText, authorName);
+              await this.generateReply(tweet, tweetText, authorName);
               this.repliesMade++;
               
               // Only process one tweet per cycle
@@ -111,7 +119,7 @@ class TwitterBot {
           }
         }
       } catch (error) {
-        console.error('Error processing tweet:', error);
+        this.logActivity(`Error processing tweet: ${error.message}`, 'error');
       }
     }
   }
@@ -179,40 +187,68 @@ class TwitterBot {
     try {
       // Find reply button and click it
       const replyButton = tweetElement.querySelector('[data-testid="reply"]');
-      if (!replyButton) return;
+      if (!replyButton) {
+        this.logActivity('Reply button not found', 'error');
+        return;
+      }
       
-      // Log activity
-      this.logActivity(`Replying to ${authorName}`);
+      this.logActivity(`Starting reply to ${authorName}`, 'info');
       
       // Wait for random time to simulate human behavior
-      await this.delay(this.getRandomInt(2000, 5000));
+      const waitTime = this.getRandomInt(2000, 5000);
+      this.logActivity(`Waiting ${Math.round(waitTime/1000)}s before clicking reply...`, 'info');
+      await this.delay(waitTime);
       
       // Click reply button
       replyButton.click();
       
       // Wait for reply box to appear
-      await this.delay(1000);
+      await this.delay(2000);
       
-      // Get AI-generated reply using Grok API
+      // Get AI-generated reply
+      this.logActivity('Generating AI reply...', 'info');
       const reply = await this.getAIReply(tweetText, authorName);
       
       // Find reply input field
       const replyInput = document.querySelector('[data-testid="tweetTextarea_0"]');
       if (!replyInput) {
-        console.error('Reply input not found');
+        this.logActivity('Reply input field not found', 'error');
         return;
       }
       
-      // Type reply with random delays between characters
-      await this.typeWithDelay(replyInput, reply);
+      // Clear any existing text
+      replyInput.innerHTML = '';
+      replyInput.focus();
+      
+      // Type reply with random delays
+      this.logActivity('Typing reply...', 'info');
+      for (const char of reply) {
+        replyInput.textContent += char;
+        replyInput.dispatchEvent(new InputEvent('input', {
+          bubbles: true,
+          cancelable: true,
+          inputType: 'insertText',
+          data: char
+        }));
+        await this.delay(this.getRandomInt(20, 100));
+      }
       
       // Wait before submitting
-      await this.delay(this.getRandomInt(1000, 3000));
+      const submitWaitTime = this.getRandomInt(1000, 3000);
+      this.logActivity(`Waiting ${Math.round(submitWaitTime/1000)}s before submitting...`, 'info');
+      await this.delay(submitWaitTime);
       
       // Find and click the reply submit button
       const submitButton = document.querySelector('[data-testid="tweetButton"]');
-      if (submitButton) {
+      if (!submitButton) {
+        this.logActivity('Submit button not found', 'error');
+        return;
+      }
+      
+      // Check if button is enabled
+      if (!submitButton.hasAttribute('disabled')) {
         submitButton.click();
+        this.logActivity(`Successfully replied to ${authorName}`, 'success');
         
         // Save to activity log
         chrome.runtime.sendMessage({ 
@@ -224,16 +260,19 @@ class TwitterBot {
             timestamp: new Date().toISOString()
           }
         });
+        
+        // Wait for UI to reset
+        await this.delay(2000);
+      } else {
+        this.logActivity('Submit button is disabled', 'error');
       }
       
-      // Wait for UI to reset
-      await this.delay(2000);
-      
-      // Close any open dialogs if needed
+      // Close any open dialogs
       this.closeDialogs();
       
     } catch (error) {
-      console.error('Error generating reply:', error);
+      this.logActivity(`Error generating reply: ${error.message}`, 'error');
+      this.closeDialogs(); // Clean up if there's an error
     }
   }
   
@@ -257,24 +296,6 @@ class TwitterBot {
     });
   }
   
-  async typeWithDelay(element, text) {
-    // Focus on the element
-    element.focus();
-    
-    // Type characters with random delays
-    for (const char of text) {
-      // Set content - in a real implementation, you would need to trigger proper events
-      // This is a simplified version
-      element.textContent += char;
-      
-      // Dispatch input event to make Twitter recognize the input
-      element.dispatchEvent(new Event('input', { bubbles: true }));
-      
-      // Random delay between keystrokes (20-100ms)
-      await this.delay(this.getRandomInt(20, 100));
-    }
-  }
-  
   closeDialogs() {
     // Find and click close buttons on any open dialogs
     const closeButtons = document.querySelectorAll('[data-testid="closeButton"]');
@@ -283,14 +304,12 @@ class TwitterBot {
     }
   }
   
-  logActivity(message) {
+  logActivity(message, type = 'info') {
     console.log(`[TwitterBot] ${message}`);
-    chrome.runtime.sendMessage({ 
-      action: 'logActivity', 
-      data: {
-        message,
-        timestamp: new Date().toISOString()
-      }
+    chrome.runtime.sendMessage({
+      action: 'logActivity',
+      message: message,
+      type: type
     });
   }
   

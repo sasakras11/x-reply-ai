@@ -54,6 +54,62 @@
     .status-stopped {
       color: #e0245e;
     }
+
+    .next-action {
+      background: #f7f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+
+    .next-action-timer {
+      font-size: 14px;
+      color: #1DA1F2;
+      font-weight: bold;
+    }
+
+    .next-action-desc {
+      font-size: 12px;
+      color: #657786;
+      margin-top: 5px;
+    }
+    
+    .live-log {
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #e1e8ed;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+      background: #f8f9fa;
+    }
+
+    .log-entry {
+      font-size: 12px;
+      padding: 5px 0;
+      border-bottom: 1px solid #e1e8ed;
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-time {
+      color: #657786;
+      margin-right: 5px;
+    }
+
+    .log-error {
+      color: #e0245e;
+    }
+
+    .log-success {
+      color: #17BF63;
+    }
+
+    .log-info {
+      color: #1DA1F2;
+    }
     
     .controls {
       display: flex;
@@ -237,11 +293,24 @@
         <button id="stop-bot" class="btn-stop" disabled>Stop</button>
       </div>
     </div>
+
+    <!-- New Next Action Counter -->
+    <div class="next-action">
+      <div class="next-action-timer" id="next-action-timer">Next action in: --:--</div>
+      <div class="next-action-desc" id="next-action-desc">Waiting to start...</div>
+    </div>
     
+    <!-- New Live Log Section -->
+    <div class="live-log" id="live-log">
+      <div class="log-entry">
+        <span class="log-time">00:00:00</span>
+        <span class="log-info">Bot initialized</span>
+      </div>
+    </div>
+
     <div class="tabs">
       <div class="tab active" data-tab="stats">Statistics</div>
       <div class="tab" data-tab="config">Configuration</div>
-      <div class="tab" data-tab="logs">Activity Log</div>
     </div>
     
     <div id="stats-tab" class="tab-content active">

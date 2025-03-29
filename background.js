@@ -26,6 +26,11 @@ let botState = {
     repliesToday: 0,
     lastReplyDate: null
   },
+  nextAction: {
+    type: 'none',
+    timestamp: null,
+    description: 'Bot is stopped'
+  },
   activityLog: [],
   replyLog: []
 };
@@ -70,19 +75,20 @@ function scheduleNextCheck(isBreak = false) {
   if (!botState.isRunning) return;
   
   let delaySeconds;
+  let description;
   
   if (isBreak) {
-    // Taking a longer break
     delaySeconds = getRandomInt(
       botState.config.breakDuration.min * 60,
       botState.config.breakDuration.max * 60
     );
+    description = 'Taking a break before next check';
   } else {
-    // Normal check interval
     delaySeconds = getRandomInt(
       botState.config.checkInterval.min,
       botState.config.checkInterval.max
     );
+    description = 'Checking for new tweets';
   }
   
   // Clear any existing alarms
@@ -93,7 +99,8 @@ function scheduleNextCheck(isBreak = false) {
     delayInMinutes: delaySeconds / 60
   });
   
-  console.log(`[Background] Next check scheduled in ${delaySeconds} seconds`);
+  updateNextAction('check', delaySeconds, description);
+  addLogEntry(`Scheduled next check in ${Math.round(delaySeconds / 60)} minutes`);
 }
 
 // Handle alarms
@@ -183,8 +190,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
       
     case 'getState':
-      // Popup requesting current state
-      sendResponse({ botState });
+      sendResponse({ 
+        botState,
+        currentTime: Date.now() // Send current time for timer sync
+      });
       break;
       
     case 'updateConfig':
@@ -226,15 +235,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
       
     case 'logActivity':
-      // Content script logging activity
-      botState.activityLog.push(message.data);
-      
-      // Keep log size manageable (last 100 events)
-      if (botState.activityLog.length > 100) {
-        botState.activityLog = botState.activityLog.slice(-100);
-      }
-      
-      saveState();
+      addLogEntry(message.message, message.type || 'info');
       break;
       
     case 'logReply':
@@ -263,6 +264,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ status: 'Logs cleared' });
       break;
   }
+  return true;
 });
 
 // Find and send message to active Twitter tab
@@ -321,4 +323,41 @@ function fallbackReply(tweetText) {
   ];
   
   return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+}
+
+// Add new function to update next action
+function updateNextAction(type, delaySeconds, description) {
+  botState.nextAction = {
+    type: type,
+    timestamp: Date.now() + (delaySeconds * 1000),
+    description: description
+  };
+  
+  // Notify popup of the update
+  chrome.runtime.sendMessage({
+    action: 'nextActionUpdated',
+    data: botState.nextAction
+  });
+}
+
+// Add new function to add log entry
+function addLogEntry(message, type = 'info') {
+  const entry = {
+    timestamp: new Date().toISOString(),
+    message: message,
+    type: type // 'info', 'error', or 'success'
+  };
+  
+  botState.activityLog.unshift(entry); // Add to beginning
+  if (botState.activityLog.length > 100) {
+    botState.activityLog.pop(); // Keep only last 100 entries
+  }
+  
+  // Notify popup of new log entry
+  chrome.runtime.sendMessage({
+    action: 'newLogEntry',
+    data: entry
+  });
+  
+  saveState();
 } 
