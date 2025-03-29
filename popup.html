@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twitter Engagement Bot</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      width: 360px;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    
+    .header {
+      background-color: #1DA1F2;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      border-bottom: 1px solid #e1e8ed;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+    
+    .container {
+      padding: 15px;
+    }
+    
+    .status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #e1e8ed;
+    }
+    
+    .status-label {
+      font-weight: 600;
+    }
+    
+    .status-value {
+      font-weight: normal;
+    }
+    
+    .status-running {
+      color: #17BF63;
+    }
+    
+    .status-stopped {
+      color: #e0245e;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      flex: 1;
+      transition: background-color 0.2s;
+    }
+    
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .btn-start {
+      background-color: #17BF63;
+      color: white;
+    }
+    
+    .btn-start:hover:not(:disabled) {
+      background-color: #0ea558;
+    }
+    
+    .btn-stop {
+      background-color: #e0245e;
+      color: white;
+    }
+    
+    .btn-stop:hover:not(:disabled) {
+      background-color: #c01e4e;
+    }
+    
+    .statistics {
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #f7f9fa;
+      border-radius: 4px;
+    }
+    
+    .statistics h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    
+    .statistics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    
+    .statistic-item {
+      text-align: center;
+    }
+    
+    .statistic-value {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    
+    .statistic-label {
+      font-size: 12px;
+      color: #657786;
+    }
+    
+    .config {
+      margin-bottom: 15px;
+    }
+    
+    .config h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    
+    .form-group {
+      margin-bottom: 10px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    
+    input[type="text"],
+    input[type="number"],
+    input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #e1e8ed;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    
+    .btn-save {
+      background-color: #1DA1F2;
+      color: white;
+      width: 100%;
+      margin-top: 10px;
+    }
+    
+    .btn-save:hover:not(:disabled) {
+      background-color: #1a91da;
+    }
+    
+    .activity-log {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e1e8ed;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .activity-log h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    
+    .log-entry {
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    
+    .log-time {
+      color: #657786;
+      margin-right: 5px;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #e1e8ed;
+    }
+    
+    .tab {
+      padding: 8px 15px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    
+    .tab.active {
+      border-bottom-color: #1DA1F2;
+      color: #1DA1F2;
+      font-weight: 600;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Twitter Engagement Bot</h1>
+  </div>
+  
+  <div class="container">
+    <div class="status">
+      <div>
+        <span class="status-label">Status:</span>
+        <span id="bot-status" class="status-value status-stopped">Stopped</span>
+      </div>
+      <div class="controls">
+        <button id="start-bot" class="btn-start">Start</button>
+        <button id="stop-bot" class="btn-stop" disabled>Stop</button>
+      </div>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active" data-tab="stats">Statistics</div>
+      <div class="tab" data-tab="config">Configuration</div>
+      <div class="tab" data-tab="logs">Activity Log</div>
+    </div>
+    
+    <div id="stats-tab" class="tab-content active">
+      <div class="statistics">
+        <h3>Engagement Statistics</h3>
+        <div class="statistics-grid">
+          <div class="statistic-item">
+            <div id="replies-today" class="statistic-value">0</div>
+            <div class="statistic-label">Replies Today</div>
+          </div>
+          <div class="statistic-item">
+            <div id="total-replies" class="statistic-value">0</div>
+            <div class="statistic-label">Total Replies</div>
+          </div>
+          <div class="statistic-item">
+            <div id="search-query" class="statistic-value">startup</div>
+            <div class="statistic-label">Current Query</div>
+          </div>
+          <div class="statistic-item">
+            <div id="follower-threshold" class="statistic-value">1000+</div>
+            <div class="statistic-label">Follower Threshold</div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="replies-log" class="activity-log">
+        <h3>Recent Replies</h3>
+        <!-- Reply log entries will be inserted here -->
+      </div>
+    </div>
+    
+    <div id="config-tab" class="tab-content">
+      <div class="config">
+        <h3>Bot Configuration</h3>
+        <form id="config-form">
+          <div class="form-group">
+            <label for="search-query-input">Search Query:</label>
+            <input type="text" id="search-query-input" placeholder="e.g. startup" value="startup">
+          </div>
+          
+          <div class="form-group">
+            <label for="follower-threshold-input">Minimum Follower Count:</label>
+            <input type="number" id="follower-threshold-input" min="0" value="1000">
+          </div>
+          
+          <div class="form-group">
+            <label for="check-interval-min">Check Interval (seconds):</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="number" id="check-interval-min" placeholder="Min" value="100" style="width: 50%;">
+              <input type="number" id="check-interval-max" placeholder="Max" value="180" style="width: 50%;">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="break-duration-min">Break Duration (minutes):</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="number" id="break-duration-min" placeholder="Min" value="20" style="width: 50%;">
+              <input type="number" id="break-duration-max" placeholder="Max" value="30" style="width: 50%;">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="gemini-api-key">Gemini API Key:</label>
+            <input type="password" id="gemini-api-key" placeholder="Enter your Gemini API key" value="AIzaSyANdRVvaj_oH4BaykI8RsgtPaadQlc5jms">
+          </div>
+          
+          <button type="submit" class="btn-save">Save Configuration</button>
+        </form>
+      </div>
+    </div>
+    
+    <div id="logs-tab" class="tab-content">
+      <div id="activity-log" class="activity-log">
+        <h3>Activity Log</h3>
+        <!-- Activity log entries will be inserted here -->
+      </div>
+      <button id="clear-logs" class="btn-save">Clear Logs</button>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html> 

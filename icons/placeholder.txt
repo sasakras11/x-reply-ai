@@ -1,0 +1,9 @@
+Create the following icon files:
+1. icon16.png - 16x16 pixel icon
+2. icon48.png - 48x48 pixel icon
+3. icon128.png - 128x128 pixel icon
+
+These should be simple PNG files with the Twitter Engagement Bot logo.
+You can use any image editor to create these icons.
+
+For development purposes, you can use solid color squares with the text "TEB" on them. 
